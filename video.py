@@ -1,8 +1,9 @@
 from yt_dlp import YoutubeDL
 import whisper
+import argparse
 
 
-def download_video(url, output_path="video.mp4", max_filesize="500MB"):
+def download_video(url, output_path="/output/video.mp4", max_filesize="500MB"):
     options = {
         "format": "bestvideo+bestaudio/best",
         "outtmpl": output_path,
@@ -12,7 +13,7 @@ def download_video(url, output_path="video.mp4", max_filesize="500MB"):
         ydl.download([url])
 
 
-def transcribe_video(video_path):
+def transcribe_video(video_path, output_path="/output/output_subtitles.srt"):
     # Load the Whisper model
     model = whisper.load_model("large")  # Use "large" for the best accuracy
 
@@ -21,7 +22,7 @@ def transcribe_video(video_path):
 
     # Save as SRT
 
-    with open("output_subtitles.srt", "w", encoding="utf-8") as file:
+    with open(output_path, "w", encoding="utf-8") as file:
         for segment in result["segments"]:
             start = segment["start"]
             end = segment["end"]
@@ -43,7 +44,57 @@ def format_time(seconds):
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
 
+def main():
+    # Create the argument parser
+    parser = argparse.ArgumentParser(description="Video Transcriber Tool")
+
+    # Add arguments
+    parser.add_argument(
+        "--youtube-url",
+        type=str,
+        help="URL of the YouTube video to transcribe",
+        required=False,
+    )
+    parser.add_argument(
+        "--language",
+        type=str,
+        help="Language code for transcription (e.g., en for English)",
+        required=True,
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        help="Path to the local video file to transcribe",
+        required=False,
+    )
+    parser.add_argument(
+        "--output", type=str, help="Custom output file path (optional)", required=False
+    )
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Print or use the arguments
+    if args.youtube_url:
+        print(
+            f"Transcribing YouTube URL: {args.youtube_url} in {args.language} language."
+        )
+        download_video(args.youtube_url, "downloaded_video.mp4")
+        transcribe_video("downloaded_video.mp4.webm")
+    elif args.input:
+        print(f"Transcribing local file: {args.input} in {args.language} language.")
+        download_video(args.input, "downloaded_video.mp4")
+        transcribe_video("downloaded_video.mp4")
+    else:
+        print("No input provided. Please specify either --youtube-url or --input.")
+
+    if args.output:
+        print(f"Output will be saved to: {args.output}")
+    else:
+        print("Using default output location.")
+
+
+if __name__ == "__main__":
+    main()
+
 # Main execution
-video_url = "https://www.youtube.com/watch?v=PLwd4pcGcIw"
-download_video(video_url, "downloaded_video.mp4")
-transcribe_video("downloaded_video.mp4.webm")
